@@ -1,0 +1,117 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* =========================
+   BODY
+========================= */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+}
+
+/* =========================
+   HEADER
+========================= */
+header {
+    background-color: #1e3a8a;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    margin-bottom: 5px;
+}
+
+header p {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* =========================
+   CONTROLES (FILTRO)
+========================= */
+.controles {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+
+    margin: 20px auto;
+    padding: 10px;
+
+    background-color: white;
+    width: fit-content;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.controles label {
+    font-weight: bold;
+}
+
+.controles select {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* =========================
+   MAPA (CRÍTICO)
+========================= */
+#map {
+    height: 600px;   /* ESSENCIAL */
+    width: 90%;
+    margin: 0 auto;
+
+    border-radius: 10px;
+    overflow: hidden;
+
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* =========================
+   MAIN
+========================= */
+main {
+    margin-bottom: 20px;
+}
+
+/* =========================
+   INFO
+========================= */
+.info {
+    background-color: white;
+    width: 90%;
+    margin: 20px auto;
+    padding: 20px;
+
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.info h2 {
+    margin-bottom: 10px;
+}
+
+.info p {
+    line-height: 1.5;
+}
+
+/* =========================
+   RESPONSIVO
+========================= */
+@media (max-width: 768px) {
+
+    #map {
+        height: 400px;
+    }
+
+    .controles {
+        flex-direction: column;
+    }
+}
