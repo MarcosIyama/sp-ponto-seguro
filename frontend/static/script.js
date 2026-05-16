@@ -3,42 +3,20 @@
 // =========================
 const map = L.map("map").setView([-23.55, -46.63], 11);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap"
-}).addTo(map);
+L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    attribution: "© OpenStreetMap"
+  }
+).addTo(map);
 
 
 // =========================
 // 📦 VARIÁVEIS
 // =========================
 let todosCrimes = [];
-let pontosOnibus = [];
 
 let camadaCrimes = L.layerGroup().addTo(map);
-
-
-// =========================
-// 📏 DISTÂNCIA
-// =========================
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-
-  const R = 6371000;
-
-  const toRad = (deg) => deg * Math.PI / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-    Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
 
 
 // =========================
@@ -49,8 +27,6 @@ const filtro = document.getElementById("filtro");
 if (filtro) {
 
   filtro.addEventListener("change", (e) => {
-
-    console.log("ANO:", e.target.value);
 
     desenharCrimes(e.target.value);
 
@@ -68,33 +44,52 @@ fetch("http://127.0.0.1:5000/api/pontos_onibus")
 
   .then(geojson => {
 
-    geojson.features.forEach(feature => {
+    L.geoJSON(geojson, {
 
-      const [lon, lat] = feature.geometry.coordinates;
+      pointToLayer: (feature, latlng) => {
 
-      pontosOnibus.push({
-        lat: parseFloat(lat),
-        lon: parseFloat(lon)
-      });
+  return L.circleMarker(latlng, {
 
-      L.circleMarker([lat, lon], {
-        radius: 5,
-        color: "green"
-      })
-      .addTo(map)
-      .bindPopup(`
-        <b>${feature.properties?.nm_ponto_onibus || "Ponto de ônibus"}</b>
-      `);
+    radius: 7,
+    color: "#0066ff",
+    fillColor: "#3399ff",
+    fillOpacity: 1,
+    weight: 2
 
-    });
+  });
 
-    console.log("Pontos carregados:", pontosOnibus.length);
+},
 
-    carregarCrimes();
+      onEachFeature: (feature, layer) => {
 
-  })
+        const nome =
+          feature.properties?.nm_ponto_onibus ||
+          "Ponto de ônibus";
 
-  .catch(err => console.error("Erro ônibus:", err));
+        layer.bindPopup(`
+  <div style="min-width:180px">
+    
+    <h3 style="
+      margin:0;
+      color:#0066ff;
+      font-size:16px;
+    ">
+    Ponto de Ônibus
+    </h3>
+
+    <hr>
+
+    <b>Nome:</b><br>
+    ${feature.properties?.nm_ponto_onibus || "Ponto não identificado"}
+
+  </div>
+`);
+
+      }
+
+    }).addTo(map);
+
+  });
 
 
 // =========================
@@ -110,13 +105,14 @@ function carregarCrimes() {
 
       todosCrimes = dados;
 
-      console.log("Crimes carregados:", todosCrimes.length);
+      console.log(
+        "Crimes carregados:",
+        todosCrimes.length
+      );
 
       desenharCrimes("todos");
 
-    })
-
-    .catch(err => console.error("Erro crimes:", err));
+    });
 
 }
 
@@ -137,7 +133,7 @@ function desenharCrimes(anoSelecionado) {
 
     if (isNaN(lat) || isNaN(lon)) return;
 
-    // filtro por ano
+    // filtro ano
     if (
       anoSelecionado !== "todos" &&
       String(crime.ano) !== String(anoSelecionado)
@@ -145,49 +141,53 @@ function desenharCrimes(anoSelecionado) {
       return;
     }
 
-    // buffer
-    let perto = false;
+    contador++;
 
-    for (let ponto of pontosOnibus) {
+    L.circleMarker([lat, lon], {
 
-      const dist = calcularDistancia(
-        lat,
-        lon,
-        ponto.lat,
-        ponto.lon
-      );
+      radius: 3,
+      color:"#cc0000",
+      fillColor: "#ff4d4d",
+      fillOpacity: 0.7,
+      weight: 1
 
-      // BUFFER
-      if (dist <= 1000) {
+    })
 
-        perto = true;
+    .addTo(camadaCrimes)
 
-        break;
+    .bindPopup(`
+      <div style="min-width:180px">
 
-      }
+        <h3 style="
+          margin:0;
+          color:#cc0000;
+          font-size:16px;
+        ">
+          Ocorrência
+        </h3>
 
-    }
+        <hr>
 
-    // desenhar crime
-    if (perto) {
-
-      contador++;
-
-      L.circleMarker([lat, lon], {
-        radius: 4,
-        color: "red"
-      })
-      .addTo(camadaCrimes)
-      .bindPopup(`
         <b>Tipo:</b> ${crime.tipo_crime || "N/A"}<br>
         <b>Ano:</b> ${crime.ano}<br>
-        <b>Bairro:</b> ${crime.bairro || "N/A"}
-      `);
+        <b>Hora:</b> ${crime.hora || "N/A"}<br>
+        <b>Bairro:</b> ${crime.bairro || "N/A"}<br>
+        <b>Logradouro:</b> ${crime.logradouro || "N/A"}
 
-    }
+      </div>
+            `);
 
   });
 
-  console.log("Crimes filtrados:", contador);
+  console.log(
+    "Crimes desenhados:",
+    contador
+  );
 
 }
+
+
+// =========================
+// 🚀 INICIAR
+// =========================
+carregarCrimes();

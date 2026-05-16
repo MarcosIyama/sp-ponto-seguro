@@ -23,8 +23,11 @@ header {
     text-align: center;
 }
 
-header h1 {
-    margin-bottom: 5px;
+header .logo {
+    display: block;
+    margin: 0 auto 20px auto; /* centraliza e dá espaço abaixo */
+    max-width: 200px;         /* controla o tamanho da imagem */
+    height: auto;             /* mantém proporção */
 }
 
 header p {

@@ -9,15 +9,29 @@
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <!-- Favicon padrão -->
+<link rel="icon" type="image/x-icon" href="../static/favicon.ico">
+
+<!-- PNGs em diferentes tamanhos -->
+<link rel="icon" type="image/png" sizes="96x96" href="../static/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../static/web-app-manifest-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="../static/web-app-manifest-512x512.png">
+
+<!-- Apple Touch Icon (para iOS) -->
+<link rel="apple-touch-icon" href="../static/apple-touch-icon.png">
+
+<!-- Manifest (para PWA) -->
+<link rel="manifest" href="../static/site.webmanifest">
 </head>
 
 <body>
 
   <!-- HEADER -->
   <header>
-    <h1>SP Ponto Seguro</h1>
-    <p>Crimes próximos a pontos de ônibus</p>
-  </header>
+  <img src="../static/logoMenor.png" alt="SP Ponto Seguro" class="logo">
+  <p>Crimes próximos a pontos de ônibus</p>
+</header>
 
   <!-- CONTEÚDO -->
   <main>
@@ -29,6 +43,8 @@
     <option value="2023">2023</option>
     <option value="2024">2024</option>
     <option value="2025">2025</option>
+    <option value="2025">2026</option>
+
   </select>
 </div>
 
@@ -39,7 +55,7 @@
     <div class="info">
       <h2>Sobre o projeto</h2>
       <p>
-        Este mapa mostra crimes que ocorreram em um raio de 100 metros de pontos de ônibus,
+        Este mapa mostra crimes que ocorreram em um raio de 50 metros de pontos de ônibus,
         ajudando a identificar áreas de maior risco.
       </p>
     </div>
