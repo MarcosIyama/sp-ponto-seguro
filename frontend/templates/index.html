@@ -42,3 +42,30 @@
       <select id="filtro">
         <option value="2023">2023</option>
         <option value="2024">2024</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+      </select>
+    </div>
+
+    <!-- MAPA -->
+    <div id="map"></div>
+
+    <!-- INFO -->
+    <div class="info">
+      <h2>Sobre o projeto</h2>
+      <p>
+        Este mapa mostra crimes que ocorreram em um raio de 50 metros de pontos de ônibus,
+        ajudando a identificar áreas de maior risco.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Seu JS -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
