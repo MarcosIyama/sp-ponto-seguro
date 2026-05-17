@@ -1,15 +1,20 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, render_template
 from flask_cors import CORS
 import pandas as pd
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="../frontend/templates", static_folder="../frontend/static")
 CORS(app)
 
 # =========================
 # CAMINHO BASE
 # =========================
 BASE_DIR = os.path.dirname(__file__)
+
+@app.route("/")
+def home():
+    # Renderiza o index.html em vez de JSON
+    return render_template("index.html")
 
 # =========================
 # API - CRIMES
