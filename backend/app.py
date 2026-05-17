@@ -80,7 +80,7 @@ def pontos_onibus():
 # =========================
 # TESTE API
 # =========================
-@app.route("/")
+@app.route("/status")
 def home():
 
     return jsonify({
