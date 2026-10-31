@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{% block title %}SP Ponto Seguro{% endblock %}</title>
+    <meta name="description" content="{% block description %}Mapa de crimes próximos a pontos de ônibus em São Paulo.{% endblock %}">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Favicon padrão -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <!-- PNGs em diferentes tamanhos -->
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='favicon-96x96.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='web-app-manifest-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='web-app-manifest-512x512.png') }}">
+
+    <!-- Apple Touch Icon (para iOS) -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+    <!-- Manifest (para PWA) -->
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+
+    <!-- Itens extras de cada página (ex.: CSS do Leaflet) -->
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <a href="{{ url_for('home') }}">
+            <img src="{{ url_for('static', filename='logoMenor.png') }}" alt="SP Ponto Seguro" class="logo">
+        </a>
+        <p>Crimes próximos a pontos de ônibus</p>
+
+        <!-- MENU: adicione um link aqui a cada página nova -->
+        <nav class="menu" aria-label="Menu principal">
+            <a href="{{ url_for('home') }}" {% if request.path == '/' %}class="ativo" aria-current="page"{% endif %}>Mapa</a>
+            <a href="{{ url_for('metodologia') }}" {% if request.path == '/metodologia' %}class="ativo" aria-current="page"{% endif %}>Metodologia</a>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- RODAPÉ -->
+    <footer>
+        <p>SP Ponto Seguro: crimes registrados a até 50 metros de pontos de ônibus em São Paulo.</p>
+    </footer>
+
+    <!-- Scripts de cada página -->
+    {% block scripts %}{% endblock %}
+
+</body>
+
+</html>

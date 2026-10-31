@@ -7,15 +7,25 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-app = Flask(__name__, 
-            template_folder=os.path.join(PROJECT_ROOT, "frontend", "templates"), 
+app = Flask(__name__,
+            template_folder=os.path.join(PROJECT_ROOT, "frontend", "templates"),
             static_folder=os.path.join(PROJECT_ROOT, "frontend", "static"))
 CORS(app)
+
 
 @app.route("/")
 def home():
     # Renderiza o index.html
     return render_template("index.html")
+
+
+# =========================
+# PÁGINAS
+# =========================
+@app.route("/metodologia")
+def metodologia():
+    return render_template("metodologia.html")
+
 
 # =========================
 # API - CRIMES
@@ -29,9 +39,11 @@ def get_crimes():
         dados = df.to_dict(orient="records")
         print(f"Crimes enviados: {len(dados)}")
         return jsonify(dados)
+
     except Exception as e:
         print("Erro API crimes:", e)
         return jsonify({"erro": str(e)}), 500
+
 
 # =========================
 # API - PONTOS DE ÔNIBUS
@@ -41,12 +53,14 @@ def pontos_onibus():
     caminho_geojson = os.path.join(PROJECT_ROOT, "database", "geo", "ponto_onibus_corrigido.geojson")
     return send_file(caminho_geojson)
 
+
 # =========================
 # TESTE API
 # =========================
 @app.route("/status")
 def status():
     return jsonify({"status": "API funcionando"})
+
 
 # =========================
 # RODAR SERVIDOR

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Metodologia | SP Ponto Seguro{% endblock %}
+{% block description %}Como os dados do SP Ponto Seguro são obtidos, tratados e apresentados no mapa.{% endblock %}
+
+{% block content %}
+<article class="pagina">
+    <h1>Metodologia</h1>
+    <p>
+        Esta página explica de onde vêm os dados do mapa, como foram tratados
+        e quais são as limitações da análise.
+    </p>
+
+    <h2>Fonte dos dados</h2>
+    <p>[Preencher: origem dos registros de crimes e dos pontos de ônibus, período coberto e data da última atualização.]</p>
+
+    <h2>Tratamento dos dados</h2>
+    <p>[Preencher: limpeza dos registros, geocodificação dos endereços e remoção de ocorrências sem coordenadas.]</p>
+
+    <h2>Raio de 50 metros</h2>
+    <p>
+        O mapa considera apenas ocorrências registradas a até 50 metros de um ponto de ônibus.
+        [Preencher: motivo da escolha desse raio e como a distância foi calculada.]
+    </p>
+
+    <h2>Limitações</h2>
+    <p>[Preencher: crimes não registrados, endereços imprecisos e outras limitações que afetam a leitura do mapa.]</p>
+</article>
+{% endblock %}
