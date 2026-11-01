@@ -99,6 +99,18 @@ select:focus-visible {
 }
 
 /* =========================
+   STATUS DO MAPA
+========================= */
+.status-mapa {
+    width: 90%;
+    margin: 0 auto 10px auto;
+    text-align: center;
+    font-size: 14px;
+    color: #555;
+    min-height: 1.3em; /* evita que o mapa "pule" quando o texto muda */
+}
+
+/* =========================
    MAPA (CRÍTICO)
 ========================= */
 #map {
