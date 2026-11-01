@@ -10,7 +10,7 @@
 //          Ótimo para ver o panorama da cidade com o mapa afastado.
 //        - PONTOS: um ponto vermelho para cada ocorrência, com popup.
 //          Ótimo para ver detalhes com o mapa aproximado.
-//   5. Mostra os pontos de ônibus só quando o zoom está alto.
+//   5. Mostra os pontos de ônibus só na visualização de pontos, com o zoom alto.
 // =====================================================================
 
 
@@ -23,13 +23,20 @@
 const CENTRO_INICIAL = [-23.55, -46.63];
 const ZOOM_INICIAL = 11;
 
-// A partir deste nível de zoom, os pontos de ônibus aparecem.
-// (Quanto maior o número do zoom, mais "perto" o mapa está.)
-const ZOOM_MINIMO_PONTOS = 14;
+// Zoom mínimo permitido: impede afastar o mapa além da região metropolitana.
+// (No zoom 10 ainda dá para ver a cidade inteira numa tela de celular.
+// Se quiser limitar mais, use 11; se quiser liberar, apague o minZoom do L.map.)
+const ZOOM_MINIMO_MAPA = 10;
 
 // No modo "Automática": abaixo deste zoom mostramos o mapa de calor;
 // a partir dele, mostramos cada ocorrência como um ponto.
+// (Quanto maior o número do zoom, mais "perto" o mapa está.)
 const ZOOM_TROCA_CALOR_PONTOS = 15;
+
+// Os pontos de ônibus aparecem no mesmo zoom em que o calor vira pontos
+// (e só na visualização de pontos; no mapa de calor eles não são usados).
+// (Esta linha precisa ficar depois da constante acima, porque depende dela.)
+const ZOOM_MINIMO_PONTOS = ZOOM_TROCA_CALOR_PONTOS;
 
 // Quantas ocorrências desenhar por "quadro" de animação.
 // Desenhar em lotes evita que a página trave quando há muitos pontos.
@@ -41,12 +48,34 @@ const TAMANHO_LOTE = 2000;
 const MARGEM_DESENHO = 0.5;
 
 // Ajustes do mapa de calor (plugin Leaflet.heat).
-// Estes valores são um ponto de partida: teste e ajuste ao seu gosto.
+//
+// COMO ELE FUNCIONA (para entender os números abaixo):
+//   O plugin divide a tela em pequenas células e conta quantas ocorrências
+//   caem em cada uma. A cor de cada célula depende de (contagem / máximo):
+//   quanto mais perto de 1, mais escura. Células vizinhas se somam.
+//   Ao afastar o mapa, cada célula cobre uma área maior e junta mais
+//   ocorrências, então o "máximo" é recalculado a cada nível de zoom
+//   (veja a função maximoDoCalor).
+//
+// Estes valores são um ponto de partida. Para testar outros valores SEM
+// editar o arquivo, abra o Console do navegador (F12) e digite, por exemplo:
+//     ajustarCalor({ ocorrenciasParaMaximo: 6 })
 const CALOR = {
-  // Peso de cada ocorrência (de 0 a 1). Uma ocorrência isolada fica
-  // amarelada; várias ocorrências próximas vão somando até ficar vermelho escuro.
-  // Se o mapa ficar "todo vermelho", diminua; se ficar "apagado", aumente.
-  peso: 0.3,
+  // Quantas ocorrências numa mesma célula, no zoom de referência (abaixo),
+  // deixam a cor no máximo (vermelho escuro).
+  //   Mapa todo vermelho -> AUMENTE este número.
+  //   Mapa muito apagado -> DIMINUA este número.
+  ocorrenciasParaMaximo: 12,
+
+  // Nível de zoom em que o número acima vale.
+  zoomReferencia: 14,
+
+  // A cada nível de zoom que o mapa se afasta, as células cobrem uma área 4 vezes
+  // maior. Como as ocorrências se concentram em poucos lugares, a contagem não
+  // cresce tanto assim: este fator (entre 2 e 4) compensa o crescimento.
+  //   Mapa afastado mais vermelho que o aproximado -> AUMENTE o fator.
+  //   Mapa afastado mais apagado que o aproximado  -> DIMINUA o fator.
+  fatorPorZoom: 3,
 
   // Raio de influência de cada ocorrência, em PIXELS (não em metros).
   raio: 18,
@@ -54,29 +83,32 @@ const CALOR = {
   // Suavização das bordas das manchas (também em pixels).
   desfoque: 15,
 
-  // Zoom a partir do qual cada ocorrência tem o peso máximo.
-  // Em zooms menores, o plugin reduz o peso automaticamente, para as
-  // manchas não se acumularem e saturarem quando o mapa está afastado.
-  zoomMaximo: 15,
+  // Opacidade máxima do mapa de calor como um todo (0 a 1).
+  // Com 1, as manchas mais escuras cobrem por completo os nomes de bairros e
+  // ruas que estão no mapa por baixo; valores menores deixam os nomes visíveis.
+  //   Nomes ainda difíceis de ler -> DIMINUA (por exemplo, 0.5).
+  //   Cores muito fracas          -> AUMENTE (por exemplo, 0.8).
+  opacidadeMaxima: 0.9,
 
-  // Opacidade mínima das manchas mais fracas (0 a 1).
-  opacidadeMinima: 0.3,
+  // Opacidade mínima que CADA célula com ocorrência recebe (0 a 1).
+  // Deve ser bem baixa: células vizinhas somam as opacidades, então um valor
+  // alto (como 0.3) deixa tudo vermelho mesmo onde há poucas ocorrências.
+  opacidadeMinima: 0.02,
 
-  // Cores, da intensidade mais baixa (0.2) à mais alta (1.0).
+  // Cores, da intensidade mais baixa (0.15) à mais alta (1.0).
   gradiente: {
-    0.2: "#ffffb2",
-    0.4: "#fecc5c",
-    0.6: "#fd8d3c",
-    0.8: "#f03b20",
-    1.0: "#bd0026"
+    0.15: "#fed976",
+    0.35: "#feb24c",
+    0.55: "#fd8d3c",
+    0.75: "#e31a1c",
+    1.0: "#800026"
   }
 };
-
 
 // =====================================================================
 // 🗺️ MAPA
 // =====================================================================
-const map = L.map("map").setView(CENTRO_INICIAL, ZOOM_INICIAL);
+const map = L.map("map", { minZoom: ZOOM_MINIMO_MAPA }).setView(CENTRO_INICIAL, ZOOM_INICIAL);
 
 // Camada de fundo com as ruas (OpenStreetMap).
 L.tileLayer(
@@ -104,6 +136,14 @@ map.getPane("paneCrimes").style.zIndex = 450;
 const rendererPontos = L.canvas({ pane: "panePontos", tolerance: 4 });
 const rendererCrimes = L.canvas({ pane: "paneCrimes", tolerance: 5 });
 
+// O mapa de calor é desenhado no painel padrão "overlayPane". Como os pontos
+// vermelhos e azuis usam painéis próprios (criados acima), esse painel contém
+// só o calor, então podemos controlar a opacidade dele sem afetar mais nada.
+function aplicarOpacidadeDoCalor() {
+  map.getPane("overlayPane").style.opacity = CALOR.opacidadeMaxima;
+}
+aplicarOpacidadeDoCalor();
+
 
 // =====================================================================
 // 📦 VARIÁVEIS DE ESTADO
@@ -115,11 +155,12 @@ const camadaCrimes = L.layerGroup().addTo(map);
 // Dados das ocorrências, em três etapas de filtragem:
 let listaAtual = [];     // vindas do servidor (já filtradas por ano e horário)
 let listaFiltrada = [];  // listaAtual depois do filtro de bairro
-let pontosCalor = [];    // listaFiltrada no formato do mapa de calor: [lat, lon, peso]
+let pontosCalor = [];    // listaFiltrada no formato do mapa de calor: [lat, lon, 1]
 
 // Mapa de calor.
 let camadaCalor = null;          // criada só quando for usada pela primeira vez
 let calorDesatualizado = true;   // true = os dados mudaram e o calor precisa ser atualizado
+let zoomDoCalor = null;          // zoom para o qual o "máximo" do calor foi calculado
 
 // Pontos de ônibus.
 let camadaPontos = null;         // criada na primeira vez que o zoom permite
@@ -202,22 +243,27 @@ function modoEfetivo() {
 function renderizarStatus() {
   const partes = [estadoCrimes];
   const escolha = filtroVisualizacao ? filtroVisualizacao.value : "auto";
+  const mapaAfastado = map.getZoom() < ZOOM_MINIMO_PONTOS;
 
-  // Dica: no modo automático, o calor dá lugar aos pontos ao aproximar.
-  if (!carregando && modoEfetivo() === "calor" && escolha === "auto" && listaFiltrada.length > 0) {
-    partes.push("Aproxime o mapa para ver cada ocorrência.");
-  }
+  // Na visualização "Mapa de calor" os pontos de ônibus não são usados,
+  // então não faz sentido sugerir aproximar o mapa para vê-los.
+  if (escolha !== "calor" && mapaAfastado) {
+    // No modo automático, com o calor na tela, aproximar revela as duas coisas
+    // de uma vez: as ocorrências e os pontos de ônibus.
+    const calorEmModoAutomatico =
+      !carregando && modoEfetivo() === "calor" && escolha === "auto" && listaFiltrada.length > 0;
 
-  // Dica: os pontos de ônibus só aparecem com o mapa aproximado.
-  if (map.getZoom() < ZOOM_MINIMO_PONTOS) {
-    partes.push("Aproxime o mapa para ver os pontos de ônibus.");
+    partes.push(
+      calorEmModoAutomatico
+        ? "Aproxime o mapa para ver cada ocorrência e os pontos de ônibus."
+        : "Aproxime o mapa para ver os pontos de ônibus."
+    );
   }
 
   if (statusMapa) {
     statusMapa.textContent = partes.filter(Boolean).join(" ");
   }
 }
-
 
 // =====================================================================
 // 💬 POPUPS
@@ -293,11 +339,16 @@ function carregarPontos() {
     });
 }
 
-// Mostra ou esconde os pontos de ônibus conforme o zoom.
+// Mostra ou esconde os pontos de ônibus.
+// Eles só aparecem quando as duas condições abaixo são verdadeiras:
+//   1) a visualização atual é a de pontos (no mapa de calor não são necessários);
+//   2) o zoom está alto o bastante.
+// Enquanto isso não acontecer, os pontos de ônibus nem são baixados do servidor.
+// Depois de baixados uma vez, ficam guardados e só são escondidos/mostrados.
 function atualizarPontos() {
-  const zoomSuficiente = map.getZoom() >= ZOOM_MINIMO_PONTOS;
+  const deveMostrar = modoEfetivo() === "pontos" && map.getZoom() >= ZOOM_MINIMO_PONTOS;
 
-  if (zoomSuficiente) {
+  if (deveMostrar) {
     if (!camadaPontos) {
       carregarPontos();                // primeira vez: busca no servidor
     } else if (!map.hasLayer(camadaPontos)) {
@@ -324,36 +375,74 @@ const legendaCalor = L.control({ position: "bottomright" });
 legendaCalor.onAdd = function () {
   const div = L.DomUtil.create("div", "legenda-calor leaflet-control");
 
-  // Transforma {0.2: "#ffffb2", ...} em "#ffffb2 20%, ..." para o CSS.
+  // Transforma {0.15: "#fed976", ...} em "#fed976 15%, ..." para o CSS.
+  // ATENÇÃO: é preciso ORDENAR pela posição. O JavaScript lista primeiro as
+  // chaves que são números inteiros (como a "1" de 1.0), e o CSS exige as
+  // cores em ordem crescente; fora de ordem, a barra fica de uma cor só.
   const cores = Object.entries(CALOR.gradiente)
+    .map(([posicao, cor]) => [parseFloat(posicao), cor])
+    .sort((a, b) => a[0] - b[0])
     .map(([posicao, cor]) => `${cor} ${Math.round(posicao * 100)}%`)
     .join(", ");
 
   div.innerHTML = `
     <span>Menos</span>
-    <div class="legenda-calor-barra" style="background: linear-gradient(to right, ${cores})"></div>
+    <div class="legenda-calor-barra" style="background: linear-gradient(to right, ${cores}); opacity: ${CALOR.opacidadeMaxima}"></div>
     <span>Mais</span>
   `;
   return div;
 };
 
-function mostrarCalor() {
-  // Cria a camada na primeira vez que ela é necessária.
-  if (!camadaCalor) {
-    camadaCalor = L.heatLayer(pontosCalor, {
-      radius: CALOR.raio,
-      blur: CALOR.desfoque,
-      maxZoom: CALOR.zoomMaximo,
-      minOpacity: CALOR.opacidadeMinima,
-      gradient: CALOR.gradiente
-    });
-    calorDesatualizado = false;
-  }
+// Calcula o "máximo" do mapa de calor para um nível de zoom.
+// Afastando o mapa, cada célula junta mais ocorrências, então o máximo sobe.
+// Exemplo com os valores padrão (12 no zoom 14, fator 3):
+//   zoom 14 -> 12   |   zoom 13 -> 36   |   zoom 11 -> 324
+function maximoDoCalor(zoom) {
+  return CALOR.ocorrenciasParaMaximo * Math.pow(CALOR.fatorPorZoom, CALOR.zoomReferencia - zoom);
+}
 
-  // Se os dados mudaram desde a última vez, atualiza a camada.
-  if (calorDesatualizado) {
-    camadaCalor.setLatLngs(pontosCalor);
+// Opções que enviamos ao plugin do mapa de calor.
+function opcoesDoCalor() {
+  return {
+    radius: CALOR.raio,
+    blur: CALOR.desfoque,
+    minOpacity: CALOR.opacidadeMinima,
+    gradient: CALOR.gradiente,
+    max: maximoDoCalor(map.getZoom()),
+    // maxZoom: 1 desliga o ajuste automático que o plugin faz por zoom,
+    // porque já fazemos o nosso em maximoDoCalor().
+    maxZoom: 1
+  };
+}
+
+// Converte listaFiltrada no formato do plugin: [latitude, longitude, peso].
+// Cada ocorrência tem peso 1; é a soma dos pesos em cada célula que define a cor.
+function prepararPontosCalor() {
+  pontosCalor = listaFiltrada.map((crime) => [crime.latNum, crime.lonNum, 1]);
+  calorDesatualizado = true;
+}
+
+function mostrarCalor() {
+  const zoom = map.getZoom();
+
+  if (!camadaCalor) {
+    // Primeira vez: cria a camada já com as opções.
+    camadaCalor = L.heatLayer(pontosCalor, opcoesDoCalor());
     calorDesatualizado = false;
+    zoomDoCalor = zoom;
+  } else {
+    // Se os dados mudaram desde a última vez, atualiza a camada.
+    if (calorDesatualizado) {
+      camadaCalor.setLatLngs(pontosCalor);
+      calorDesatualizado = false;
+    }
+
+    // Se o zoom mudou, o "máximo" precisa ser recalculado.
+    // (Só reenviamos quando muda, para não redesenhar à toa a cada arrasto.)
+    if (zoom !== zoomDoCalor) {
+      camadaCalor.setOptions(opcoesDoCalor());
+      zoomDoCalor = zoom;
+    }
   }
 
   if (!map.hasLayer(camadaCalor)) camadaCalor.addTo(map);
@@ -377,6 +466,25 @@ function esconderCalor() {
   }
 }
 
+// Ferramenta de ajuste (útil para estudo e testes): permite mudar os valores
+// do mapa de calor sem editar o arquivo. No Console do navegador (F12), digite:
+//     ajustarCalor({ ocorrenciasParaMaximo: 6, raio: 14 })
+// Os valores voltam ao normal quando a página é recarregada.
+// Quando achar valores bons, copie-os para o bloco CALOR no topo do arquivo.
+window.ajustarCalor = function (novos) {
+  Object.assign(CALOR, novos);  // atualiza as configurações
+  aplicarOpacidadeDoCalor();    // a opacidade é aplicada direto no painel do mapa
+  zoomDoCalor = null;           // força reenviar as opções ao plugin
+
+  // A legenda é montada a partir das cores, então é refeita se estiver na tela.
+  if (legendaVisivel) {
+    legendaCalor.remove();
+    legendaVisivel = false;
+  }
+
+  atualizarVisualizacao();
+  return CALOR;                 // mostra os valores atuais no Console
+};
 
 // =====================================================================
 // 🔴 OCORRÊNCIAS COMO PONTOS
@@ -476,6 +584,10 @@ function desenharCrimes(lista, versao, total) {
 // ou o mapa é movido/aproximado.
 // =====================================================================
 function atualizarVisualizacao() {
+  // Os pontos de ônibus dependem da visualização escolhida, então são
+  // reavaliados junto (eles não dependem dos dados de ocorrências).
+  atualizarPontos();
+
   // Enquanto espera o servidor, não desenha nada (os dados ainda são antigos).
   if (carregando) {
     renderizarStatus();
@@ -555,9 +667,8 @@ function aplicarFiltroBairro(ajustarMapa) {
     ? listaAtual
     : listaAtual.filter((crime) => crime.bairro === bairro);
 
-  // Prepara os dados do mapa de calor: [latitude, longitude, peso].
-  pontosCalor = listaFiltrada.map((crime) => [crime.latNum, crime.lonNum, CALOR.peso]);
-  calorDesatualizado = true;
+  // Prepara os dados do mapa de calor.
+  prepararPontosCalor();
 
   // Força o redesenho dos pontos (a área "já desenhada" deixou de valer).
   esconderPontosOcorrencias();
@@ -623,10 +734,8 @@ if (filtroVisualizacao) filtroVisualizacao.addEventListener("change", atualizarV
 
 // O mapa foi movido ou aproximado.
 // "moveend" também dispara depois de um zoom, então cobre os dois casos.
+// A função atualizarVisualizacao também cuida dos pontos de ônibus.
 map.on("moveend", atualizarVisualizacao);
-
-// Pontos de ônibus dependem só do zoom.
-map.on("zoomend", atualizarPontos);
 
 
 // =====================================================================

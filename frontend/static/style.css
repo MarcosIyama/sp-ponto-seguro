@@ -96,6 +96,13 @@ select:focus-visible {
     gap: 8px;
 }
 
+/* Caixa do bairro mais curta: poucos nomes são longos, e a lista que abre ao
+   clicar continua mostrando os nomes completos. Assim os quatro filtros cabem
+   em uma linha na maioria das telas. Ajuste o valor se quiser mais ou menos. */
+#filtro-bairro {
+    width: 11.5rem;
+}
+
 .controles label {
     font-weight: bold;
 }
@@ -150,6 +157,7 @@ select:focus-visible {
     width: 110px;
     height: 10px;
     border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.2); /* destaca o amarelo claro do início da escala */
 }
 
 /* =========================
@@ -172,11 +180,18 @@ main {
 }
 
 .info h2 {
+    font-size: 1.25rem;   /* título menor (o padrão do navegador é 1.5rem) */
     margin-bottom: 10px;
 }
 
 .info p {
+    font-size: 0.9rem;    /* texto menor (o padrão é 1rem) */
     line-height: 1.5;
+}
+
+/* Espaço entre os parágrafos (o reset do início zera as margens) */
+.info p + p {
+    margin-top: 8px;
 }
 
 /* =========================
