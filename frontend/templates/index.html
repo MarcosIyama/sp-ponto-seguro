@@ -9,14 +9,36 @@
 
 <!-- CONTROLES -->
 <div class="controles">
-    <label for="filtro">Ano:</label>
-    <select id="filtro">
-        <option value="todos" selected>Todos</option>
-        <option value="2023">2023</option>
-        <option value="2024">2024</option>
-        <option value="2025">2025</option>
-        <option value="2026">2026</option>
-    </select>
+
+    <div class="filtro-grupo">
+        <label for="filtro">Ano:</label>
+        <select id="filtro">
+            <option value="todos" selected>Todos</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+    </div>
+
+    <div class="filtro-grupo">
+        <label for="filtro-faixa">Horário:</label>
+        <select id="filtro-faixa">
+            <option value="todas" selected>Todos</option>
+            <option value="manha">Manhã (06:00 às 11:59)</option>
+            <option value="tarde">Tarde (12:00 às 17:59)</option>
+            <option value="noite">Noite (18:00 às 23:59)</option>
+            <option value="madrugada">Madrugada (00:00 às 05:59)</option>
+        </select>
+    </div>
+
+    <div class="filtro-grupo">
+        <label for="filtro-bairro">Bairro:</label>
+        <select id="filtro-bairro">
+            <option value="todos" selected>Todos</option>
+        </select>
+    </div>
+
 </div>
 
 <!-- STATUS (carregamento e dicas de zoom) -->

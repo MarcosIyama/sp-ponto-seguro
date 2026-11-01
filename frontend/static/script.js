@@ -1,13 +1,15 @@
 // =========================
 // ⚙️ CONFIGURAÇÕES
 // =========================
+const CENTRO_INICIAL = [-23.55, -46.63];
+const ZOOM_INICIAL = 11;
 const ZOOM_MINIMO_PONTOS = 14; // pontos de ônibus só aparecem a partir deste zoom
 const TAMANHO_LOTE = 2000;     // quantas ocorrências desenhar por quadro de animação
 
 // =========================
 // 🗺️ MAPA
 // =========================
-const map = L.map("map").setView([-23.55, -46.63], 11);
+const map = L.map("map").setView(CENTRO_INICIAL, ZOOM_INICIAL);
 
 L.tileLayer(
   "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -30,11 +32,16 @@ const rendererCrimes = L.canvas({ pane: "paneCrimes", tolerance: 5 });
 // =========================
 const camadaCrimes = L.layerGroup().addTo(map);
 
+let listaAtual = [];            // ocorrências do ano e horário escolhidos (filtradas no servidor)
 let camadaPontos = null;        // criada na primeira vez que o zoom permite
 let carregandoPontos = false;
+let versaoBusca = 0;            // ignora respostas antigas quando o filtro muda
 let versaoDesenho = 0;          // cancela desenhos antigos quando o filtro muda
 let estadoCrimes = "";          // texto de status sobre as ocorrências
 
+const filtroAno = document.getElementById("filtro");
+const filtroFaixa = document.getElementById("filtro-faixa");
+const filtroBairro = document.getElementById("filtro-bairro");
 const statusMapa = document.getElementById("status-mapa");
 
 // =========================
@@ -149,31 +156,76 @@ function atualizarPontos() {
 map.on("zoomend", atualizarPontos);
 
 // =========================
-// 🔴 CRIMES
+// 🔴 CRIMES: BUSCAR NO SERVIDOR (ano e horário)
 // =========================
-function mostrarAno(ano) {
-  const versao = ++versaoDesenho;
+function carregarOcorrencias() {
+  const busca = ++versaoBusca;
+  versaoDesenho++; // cancela qualquer desenho em andamento
 
   camadaCrimes.clearLayers();
   estadoCrimes = "Carregando ocorrências...";
   renderizarStatus();
 
-  // O servidor já devolve só o ano pedido (e o navegador reaproveita respostas repetidas)
-  fetch(`/api/crimes?ano=${encodeURIComponent(ano)}`)
+  const params = new URLSearchParams({
+    ano: filtroAno.value,
+    faixa: filtroFaixa.value
+  });
+
+  // O servidor já devolve só o ano e o horário pedidos (e o navegador reaproveita respostas repetidas)
+  fetch(`/api/crimes?${params}`)
     .then((res) => {
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
     })
     .then((lista) => {
-      if (versao !== versaoDesenho) return; // o usuário já escolheu outro filtro
-      desenharCrimes(lista, versao);
+      if (busca !== versaoBusca) return; // o usuário já escolheu outro filtro
+      listaAtual = lista;
+      desenharSelecao(false);
     })
     .catch((err) => {
       console.error("Erro ao carregar crimes:", err);
-      if (versao !== versaoDesenho) return;
+      if (busca !== versaoBusca) return;
       estadoCrimes = "Não foi possível carregar as ocorrências. Atualize a página para tentar de novo.";
       renderizarStatus();
     });
+}
+
+// =========================
+// 🔴 CRIMES: APLICAR O FILTRO DE BAIRRO E DESENHAR
+// (o bairro é filtrado aqui no navegador, sem nova busca)
+// =========================
+function desenharSelecao(ajustarMapa) {
+  const versao = ++versaoDesenho;
+  const bairro = filtroBairro ? filtroBairro.value : "todos";
+
+  camadaCrimes.clearLayers();
+
+  const lista = bairro === "todos"
+    ? listaAtual
+    : listaAtual.filter((crime) => crime.bairro === bairro);
+
+  if (ajustarMapa) ajustarVisao(lista, bairro);
+
+  desenharCrimes(lista, versao);
+}
+
+// Ao escolher um bairro, o mapa enquadra as ocorrências dele; ao voltar para "Todos", volta à visão da cidade
+function ajustarVisao(lista, bairro) {
+  if (bairro === "todos") {
+    map.setView(CENTRO_INICIAL, ZOOM_INICIAL);
+    return;
+  }
+
+  const pontos = [];
+  lista.forEach((crime) => {
+    const lat = parseFloat(crime.lat);
+    const lon = parseFloat(crime.lon);
+    if (!isNaN(lat) && !isNaN(lon)) pontos.push([lat, lon]);
+  });
+
+  if (pontos.length > 0) {
+    map.fitBounds(L.latLngBounds(pontos), { padding: [30, 30], maxZoom: 16 });
+  }
 }
 
 // Desenha em lotes para a página não travar enquanto os pontos aparecem
@@ -224,18 +276,37 @@ function desenharCrimes(lista, versao) {
 }
 
 // =========================
-// 📅 FILTRO
+// 🏘️ LISTA DE BAIRROS (para o filtro)
 // =========================
-const filtro = document.getElementById("filtro");
+function carregarBairros() {
+  if (!filtroBairro) return;
 
-if (filtro) {
-  filtro.addEventListener("change", (e) => {
-    mostrarAno(e.target.value);
-  });
+  fetch("/api/bairros")
+    .then((res) => {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then((bairros) => {
+      bairros.forEach((nome) => {
+        const opcao = document.createElement("option");
+        opcao.value = nome;
+        opcao.textContent = nome;
+        filtroBairro.appendChild(opcao);
+      });
+    })
+    .catch((err) => console.error("Erro ao carregar bairros:", err));
 }
+
+// =========================
+// 📅 FILTROS
+// =========================
+if (filtroAno) filtroAno.addEventListener("change", carregarOcorrencias);
+if (filtroFaixa) filtroFaixa.addEventListener("change", carregarOcorrencias);
+if (filtroBairro) filtroBairro.addEventListener("change", () => desenharSelecao(true));
 
 // =========================
 // 🚀 INICIAR
 // =========================
-mostrarAno(filtro ? filtro.value : "todos");
+carregarBairros();
+carregarOcorrencias();
 atualizarPontos();

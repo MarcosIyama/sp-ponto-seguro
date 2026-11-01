@@ -79,13 +79,21 @@ select:focus-visible {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 10px 24px;
     margin: 20px auto;
-    padding: 10px;
+    padding: 12px 16px;
     background-color: white;
     width: fit-content;
+    max-width: 90%;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.filtro-grupo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .controles label {
@@ -96,6 +104,7 @@ select:focus-visible {
     padding: 5px 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    max-width: 100%;
 }
 
 /* =========================
@@ -215,6 +224,17 @@ footer p {
 
     .controles {
         flex-direction: column;
+        align-items: stretch;
+        width: 90%;
+    }
+
+    .filtro-grupo {
+        justify-content: space-between;
+    }
+
+    .controles select {
+        flex: 1;
+        max-width: 65%;
     }
 
     .pagina {
