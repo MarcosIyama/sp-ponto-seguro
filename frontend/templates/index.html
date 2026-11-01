@@ -39,6 +39,17 @@
         </select>
     </div>
 
+    <!-- Como as ocorrências são mostradas:
+         automática = calor com o mapa afastado e pontos com o mapa aproximado -->
+    <div class="filtro-grupo">
+        <label for="filtro-visualizacao">Visualização:</label>
+        <select id="filtro-visualizacao">
+            <option value="auto" selected>Automática</option>
+            <option value="calor">Mapa de calor</option>
+            <option value="pontos">Pontos</option>
+        </select>
+    </div>
+
 </div>
 
 <!-- STATUS (carregamento e dicas de zoom) -->
@@ -56,9 +67,11 @@
         transporte público.
     </p>
     <p>
-        Os pontos azuis são paradas de ônibus e os vermelhos, ocorrências. Clique em qualquer
-        ponto para ver os detalhes e use o filtro de ano para comparar os períodos. Os dados
-        mostram apenas as ocorrências que foram registradas.
+        Com o mapa afastado, as cores mostram onde há mais ocorrências: quanto mais escura a
+        mancha, maior a concentração. Ao aproximar, aparecem as ocorrências (pontos vermelhos)
+        e as paradas de ônibus (pontos azuis). Clique em qualquer ponto para ver os detalhes e
+        use os filtros para comparar anos, horários e bairros. Os dados mostram apenas as
+        ocorrências que foram registradas.
     </p>
 </div>
 
@@ -67,6 +80,9 @@
 {% block scripts %}
 <!-- Leaflet JS (versão fixada) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Plugin do mapa de calor (precisa vir depois do Leaflet e antes do script.js) -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <!-- Seu JS -->
 <script src="{{ url_for('static', filename='script.js') }}"></script>
