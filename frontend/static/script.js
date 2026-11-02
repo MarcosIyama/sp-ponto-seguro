@@ -11,6 +11,7 @@
 //        - PONTOS: um ponto vermelho para cada ocorrência, com popup.
 //          Ótimo para ver detalhes com o mapa aproximado.
 //   5. Mostra os pontos de ônibus só na visualização de pontos, com o zoom alto.
+//   6. Permite buscar um endereço e levar o mapa até ele (caixa sobre o mapa).
 // =====================================================================
 
 
@@ -106,9 +107,40 @@ const CALOR = {
 };
 
 // =====================================================================
+// 🔎 CONFIGURAÇÕES DA BUSCA POR ENDEREÇO
+// Usamos o Nominatim, o serviço de busca de endereços do OpenStreetMap.
+// Ele é gratuito, mas tem regras de uso: no máximo 1 busca por segundo e
+// nada de "autocompletar enquanto digita". Por isso a busca só acontece
+// quando o usuário aperta Enter ou clica em "Buscar".
+// Para trocar de serviço no futuro, o ponto de partida é esta configuração
+// e a função buscarEndereco().
+// =====================================================================
+const BUSCA = {
+  // Endereço do serviço de busca.
+  url: "https://nominatim.openstreetmap.org/search",
+
+  // Área onde procuramos: uma caixa em volta da cidade de São Paulo,
+  // no formato [oeste, norte, leste, sul] (longitude/latitude).
+  areaDeBusca: [-46.85, -23.33, -46.34, -24.03],
+
+  // Quantos resultados mostrar, no máximo, quando o endereço é ambíguo.
+  maxResultados: 5,
+
+  // Zoom máximo ao levar o mapa até o resultado (17 = nível de rua/quadra).
+  zoomMaximo: 17,
+
+  // Intervalo mínimo entre duas buscas, em milissegundos (regra do serviço).
+  intervaloMinimoMs: 1000
+};
+
+
+// =====================================================================
 // 🗺️ MAPA
 // =====================================================================
-const map = L.map("map", { minZoom: ZOOM_MINIMO_MAPA }).setView(CENTRO_INICIAL, ZOOM_INICIAL);
+// zoomControl: false -> os botões de zoom são adicionados no fim do arquivo,
+// DEPOIS da caixa de busca, para a busca ficar no topo e o zoom logo abaixo.
+const map = L.map("map", { minZoom: ZOOM_MINIMO_MAPA, zoomControl: false })
+  .setView(CENTRO_INICIAL, ZOOM_INICIAL);
 
 // Camada de fundo com as ruas (OpenStreetMap).
 L.tileLayer(
@@ -719,6 +751,215 @@ function carregarBairros() {
 
 
 // =====================================================================
+// 🔎 BUSCA POR ENDEREÇO
+// Uma caixa de texto sobre o mapa. O usuário digita um endereço, aperta Enter
+// e o mapa vai até lá, marcando o local com um alfinete. Com o mapa perto,
+// as ocorrências e os pontos de ônibus da região aparecem normalmente.
+// =====================================================================
+
+let marcadorBusca = null;        // o alfinete do endereço encontrado
+let abortarBusca = null;         // permite cancelar uma busca que ainda não terminou
+let ultimaBuscaEm = 0;           // quando foi a última busca (para respeitar 1 por segundo)
+const buscaEls = {};             // guarda os elementos da caixa: input, status e lista
+
+// Mostra uma mensagem pequena embaixo da caixa de busca.
+function mostrarMensagemBusca(texto) {
+  buscaEls.status.textContent = texto;
+}
+
+// Esvazia a lista de resultados.
+function limparResultadosBusca() {
+  buscaEls.lista.innerHTML = "";
+}
+
+// Monta um texto curto para o resultado, como "Avenida Paulista, 1000 - Bela Vista".
+// (O texto completo que o serviço devolve é longo demais.)
+function rotuloDoResultado(item) {
+  const a = item.address || {};
+
+  // Nome principal: o nome do local ou a rua. Se há número, acrescenta.
+  let principal = item.name || a.road || "";
+  if (a.house_number && principal === a.road) principal += `, ${a.house_number}`;
+
+  const bairro = a.suburb || a.city_district || a.neighbourhood || "";
+  const partes = [principal, bairro].filter(Boolean);
+
+  if (partes.length > 0) return partes.join(" - ");
+
+  // Plano B: as três primeiras partes do texto completo.
+  return String(item.display_name || "Endereço encontrado").split(",").slice(0, 3).join(",");
+}
+
+// Leva o mapa até o resultado escolhido e coloca o alfinete.
+function irParaResultado(item) {
+  const lat = parseFloat(item.lat);
+  const lon = parseFloat(item.lon);
+  if (isNaN(lat) || isNaN(lon)) return;
+
+  limparResultadosBusca();
+  const rotulo = rotuloDoResultado(item);
+  mostrarMensagemBusca(rotulo);
+
+  // Troca o alfinete antigo pelo novo.
+  if (marcadorBusca) marcadorBusca.remove();
+  marcadorBusca = L.marker([lat, lon], { title: rotulo })
+    .addTo(map)
+    .bindPopup(`<b>${escapar(rotulo)}</b>`);
+
+  // O serviço devolve a "caixa" do local: pequena para uma casa, maior para
+  // uma rua ou um bairro. Enquadramos essa caixa, sem passar do zoom máximo.
+  // A caixa vem como texto: [sul, norte, oeste, leste].
+  if (Array.isArray(item.boundingbox) && item.boundingbox.length === 4) {
+    const [sul, norte, oeste, leste] = item.boundingbox.map(parseFloat);
+    map.fitBounds([[sul, oeste], [norte, leste]], { padding: [40, 40], maxZoom: BUSCA.zoomMaximo });
+  } else {
+    map.setView([lat, lon], BUSCA.zoomMaximo);
+  }
+}
+
+// Decide o que fazer com a lista de resultados que o serviço devolveu.
+function tratarResultadosBusca(resultados) {
+  if (!Array.isArray(resultados) || resultados.length === 0) {
+    mostrarMensagemBusca("Nenhum endereço encontrado em São Paulo. Tente incluir o nome da rua e o número.");
+    return;
+  }
+
+  // Um único resultado: vai direto.
+  if (resultados.length === 1) {
+    irParaResultado(resultados[0]);
+    return;
+  }
+
+  // Vários resultados: o usuário escolhe.
+  mostrarMensagemBusca("Escolha um dos resultados:");
+  resultados.forEach((item) => {
+    const li = document.createElement("li");
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.textContent = rotuloDoResultado(item); // textContent evita problemas com caracteres especiais
+    botao.addEventListener("click", () => irParaResultado(item));
+    li.appendChild(botao);
+    buscaEls.lista.appendChild(li);
+  });
+}
+
+// Faz a busca no serviço de endereços.
+async function buscarEndereco(texto) {
+  texto = texto.trim();
+
+  if (texto.length < 3) {
+    mostrarMensagemBusca("Digite pelo menos 3 caracteres.");
+    return;
+  }
+
+  // Se havia uma busca em andamento, cancela: só a mais recente importa.
+  if (abortarBusca) abortarBusca.abort();
+  const controlador = new AbortController();
+  abortarBusca = controlador;
+
+  limparResultadosBusca();
+  mostrarMensagemBusca("Buscando...");
+
+  // Respeita o limite de 1 busca por segundo do serviço.
+  const espera = BUSCA.intervaloMinimoMs - (Date.now() - ultimaBuscaEm);
+  if (espera > 0) await new Promise((resolve) => setTimeout(resolve, espera));
+  if (controlador.signal.aborted) return;
+  ultimaBuscaEm = Date.now();
+
+  // Se o texto não menciona a cidade, acrescentamos, para melhorar a precisão.
+  const consulta = /s[ãa]o paulo/i.test(texto) ? texto : `${texto}, São Paulo`;
+
+  const params = new URLSearchParams({
+    q: consulta,
+    format: "jsonv2",                           // formato da resposta
+    addressdetails: "1",                        // traz rua, número, bairro separados
+    limit: String(BUSCA.maxResultados),
+    countrycodes: "br",
+    "accept-language": "pt-BR",
+    viewbox: BUSCA.areaDeBusca.join(","),       // a caixa em volta de São Paulo
+    bounded: "1"                                // 1 = só aceita resultados dentro da caixa
+  });
+
+  try {
+    const res = await fetch(`${BUSCA.url}?${params}`, { signal: controlador.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const resultados = await res.json();
+    if (controlador.signal.aborted) return;
+
+    tratarResultadosBusca(resultados);
+  } catch (erro) {
+    if (erro.name === "AbortError") return; // busca cancelada de propósito
+    console.error("Erro na busca de endereço:", erro);
+    mostrarMensagemBusca("Não foi possível buscar agora. Tente novamente em instantes.");
+  }
+}
+
+// Limpa tudo: texto, mensagens, lista e alfinete.
+function limparBusca() {
+  if (abortarBusca) abortarBusca.abort();
+  if (marcadorBusca) {
+    marcadorBusca.remove();
+    marcadorBusca = null;
+  }
+  buscaEls.input.value = "";
+  mostrarMensagemBusca("");
+  limparResultadosBusca();
+}
+
+// Cria a caixa de busca como um "controle" do Leaflet (fica sobre o mapa).
+function criarControleBusca() {
+  const controle = L.control({ position: "topleft" });
+
+  controle.onAdd = function () {
+    const div = L.DomUtil.create("div", "busca-endereco leaflet-control");
+
+    div.innerHTML = `
+      <form role="search" autocomplete="off">
+        <label for="busca-texto" class="so-leitor-de-tela">Buscar endereço em São Paulo</label>
+        <input id="busca-texto" type="search" maxlength="120" placeholder="Buscar endereço...">
+        <button type="submit" class="busca-botao">Buscar</button>
+        <button type="button" class="busca-limpar" aria-label="Limpar busca" title="Limpar busca">×</button>
+      </form>
+      <p class="busca-status" role="status"></p>
+      <ul class="busca-resultados"></ul>
+    `;
+
+    buscaEls.input = div.querySelector("input");
+    buscaEls.status = div.querySelector(".busca-status");
+    buscaEls.lista = div.querySelector(".busca-resultados");
+
+    // Sem isto, clicar, arrastar, rolar ou apertar teclas dentro da caixa
+    // também mexeria no mapa (por exemplo, as setas moveriam o mapa).
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    L.DomEvent.on(buscaEls.input, "keydown keyup keypress", L.DomEvent.stopPropagation);
+
+    // Enter ou clique em "Buscar".
+    div.querySelector("form").addEventListener("submit", (e) => {
+      e.preventDefault(); // impede a página de recarregar
+      buscarEndereco(buscaEls.input.value);
+    });
+
+    // Botão "×".
+    div.querySelector(".busca-limpar").addEventListener("click", limparBusca);
+
+    // Tecla Esc fecha a lista de resultados.
+    buscaEls.input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        limparResultadosBusca();
+        mostrarMensagemBusca("");
+      }
+    });
+
+    return div;
+  };
+
+  return controle;
+}
+
+
+// =====================================================================
 // 👂 EVENTOS (o que acontece quando o usuário interage)
 // =====================================================================
 
@@ -741,6 +982,11 @@ map.on("moveend", atualizarVisualizacao);
 // =====================================================================
 // 🚀 INICIAR
 // =====================================================================
+// Controles do canto superior esquerdo: primeiro a busca, depois o zoom
+// (a ordem em que são adicionados define a ordem na tela).
+criarControleBusca().addTo(map);
+L.control.zoom({ position: "topleft" }).addTo(map);
+
 carregarBairros();
 carregarOcorrencias();
 atualizarPontos();
