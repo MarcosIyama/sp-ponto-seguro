@@ -1,71 +1,93 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <title>SP Ponto Seguro</title>
+{% extends "base.html" %}
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block head %}
+<!-- Leaflet CSS (versão fixada) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+{% block content %}
 
-  <!-- Favicon padrão -->
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<!-- CONTROLES -->
+<div class="controles">
 
-  <!-- PNGs em diferentes tamanhos -->
-  <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='favicon-96x96.png') }}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='web-app-manifest-192x192.png') }}">
-  <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='web-app-manifest-512x512.png') }}">
-
-  <!-- Apple Touch Icon (para iOS) -->
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
-  <!-- Manifest (para PWA) -->
-  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
-</head>
-
-<body>
-
-  <!-- HEADER -->
-  <header>
-    <img src="{{ url_for('static', filename='logoMenor.png') }}" alt="SP Ponto Seguro" class="logo">
-    <p>Crimes próximos a pontos de ônibus</p>
-  </header>
-
-  <!-- CONTEÚDO -->
-  <main>
-
-    <!-- CONTROLES -->
-    <div class="controles">
-      <label for="filtro">Ano:</label>
-      <select id="filtro">
-        <option value="2023">2023</option>
-        <option value="2024">2024</option>
-        <option value="2025">2025</option>
-        <option value="2026">2026</option>
-      </select>
+    <div class="filtro-grupo">
+        <label for="filtro">Ano:</label>
+        <select id="filtro">
+            <option value="todos" selected>Todos</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026 (até fevereiro)</option>
+        </select>
     </div>
 
-    <!-- MAPA -->
-    <div id="map"></div>
-
-    <!-- INFO -->
-    <div class="info">
-      <h2>Sobre o projeto</h2>
-      <p>
-        Este mapa mostra crimes que ocorreram em um raio de 50 metros de pontos de ônibus,
-        ajudando a identificar áreas de maior risco.
-      </p>
+    <div class="filtro-grupo">
+        <label for="filtro-faixa">Horário:</label>
+        <select id="filtro-faixa">
+            <option value="todas" selected>Todos</option>
+            <option value="manha">Manhã (06:00 às 11:59)</option>
+            <option value="tarde">Tarde (12:00 às 17:59)</option>
+            <option value="noite">Noite (18:00 às 23:59)</option>
+            <option value="madrugada">Madrugada (00:00 às 05:59)</option>
+        </select>
     </div>
 
-  </main>
+    <div class="filtro-grupo">
+        <label for="filtro-bairro">Bairro:</label>
+        <select id="filtro-bairro">
+            <option value="todos" selected>Todos</option>
+        </select>
+    </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Como as ocorrências são mostradas:
+         automática = calor com o mapa afastado e pontos com o mapa aproximado -->
+    <div class="filtro-grupo">
+        <label for="filtro-visualizacao">Visualização:</label>
+        <select id="filtro-visualizacao">
+            <option value="auto" selected>Automática</option>
+            <option value="calor">Mapa de calor</option>
+            <option value="pontos">Pontos</option>
+        </select>
+    </div>
 
-  <!-- Seu JS -->
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</div>
 
-</body>
-</html>
+<!-- STATUS (carregamento e dicas de zoom) -->
+<p id="status-mapa" class="status-mapa" role="status"></p>
+
+<!-- MAPA -->
+<div id="map" role="region" aria-label="Mapa de roubos de celulares próximos a pontos de ônibus"></div>
+
+<!-- INFO -->
+<div class="info">
+    <h2>Sobre o projeto</h2>
+    <p>
+        Este mapa reúne roubos de celulares registrados pela SSP-SP, de 2023 a fevereiro de 2026,
+        a até 50 metros de pontos de ônibus em São Paulo. O objetivo é ajudar a visualizar onde
+        esses registros se concentram.
+    </p>
+    <p>
+        Com o mapa afastado, as cores mostram onde há mais ocorrências: quanto mais escura a
+        mancha, maior a concentração. Ao aproximar, aparecem as ocorrências (pontos vermelhos) e
+        as paradas de ônibus (pontos azuis). Clique em qualquer ponto para ver os detalhes e use
+        os filtros e a busca por endereço para explorar.
+    </p>
+    <p>
+        Os dados mostram apenas as ocorrências que foram registradas e não indicam risco
+        individual. Veja como eles foram tratados, e quais são as limitações, na página
+        <a href="{{ url_for('metodologia') }}">Metodologia</a>.
+    </p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS (versão fixada) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Plugin do mapa de calor (precisa vir depois do Leaflet e antes do script.js) -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<!-- Seu JS -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+{% endblock %}

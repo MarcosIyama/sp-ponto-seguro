@@ -23,6 +23,10 @@ header {
     text-align: center;
 }
 
+header a {
+    text-decoration: none;
+}
+
 header .logo {
     display: block;
     margin: 0 auto 20px auto; /* centraliza e dá espaço abaixo */
@@ -36,21 +40,67 @@ header p {
 }
 
 /* =========================
+   MENU
+========================= */
+.menu {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 15px;
+}
+
+.menu a {
+    color: white;
+    opacity: 0.85;
+    padding: 4px 2px;
+    border-bottom: 2px solid transparent;
+}
+
+.menu a:hover,
+.menu a.ativo {
+    opacity: 1;
+    border-bottom-color: white;
+}
+
+/* =========================
+   FOCO VISÍVEL (teclado)
+========================= */
+a:focus-visible,
+select:focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 2px;
+}
+
+/* =========================
    CONTROLES (FILTRO)
 ========================= */
 .controles {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-
+    flex-wrap: wrap;
+    gap: 10px 24px;
     margin: 20px auto;
-    padding: 10px;
-
+    padding: 12px 16px;
     background-color: white;
     width: fit-content;
+    max-width: 90%;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.filtro-grupo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Caixa do bairro mais curta: poucos nomes são longos, e a lista que abre ao
+   clicar continua mostrando os nomes completos. Assim os quatro filtros cabem
+   em uma linha na maioria das telas. Ajuste o valor se quiser mais ou menos. */
+#filtro-bairro {
+    width: 11.5rem;
 }
 
 .controles label {
@@ -61,20 +111,53 @@ header p {
     padding: 5px 10px;
     border-radius: 5px;
     border: 1px solid #ccc;
+    max-width: 100%;
+}
+
+/* =========================
+   STATUS DO MAPA
+========================= */
+.status-mapa {
+    width: 90%;
+    margin: 0 auto 10px auto;
+    text-align: center;
+    font-size: 14px;
+    color: #555;
+    min-height: 1.3em; /* evita que o mapa "pule" quando o texto muda */
 }
 
 /* =========================
    MAPA (CRÍTICO)
 ========================= */
 #map {
-    height: 600px;   /* ESSENCIAL */
+    height: 600px; /* ESSENCIAL */
     width: 90%;
     margin: 0 auto;
-
     border-radius: 10px;
     overflow: hidden;
-
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* =========================
+   LEGENDA DO MAPA DE CALOR
+   (o gradiente de cores é definido no script.js)
+========================= */
+.legenda-calor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.legenda-calor-barra {
+    width: 110px;
+    height: 10px;
+    border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.2); /* destaca o amarelo claro do início da escala */
 }
 
 /* =========================
@@ -92,17 +175,78 @@ main {
     width: 90%;
     margin: 20px auto;
     padding: 20px;
-
     border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .info h2 {
+    font-size: 1.25rem;   /* título menor (o padrão do navegador é 1.5rem) */
     margin-bottom: 10px;
 }
 
 .info p {
+    font-size: 0.9rem;    /* texto menor (o padrão é 1rem) */
     line-height: 1.5;
+}
+
+/* Espaço entre os parágrafos (o reset do início zera as margens) */
+.info p + p {
+    margin-top: 8px;
+}
+
+/* =========================
+   PÁGINAS DE TEXTO
+   (ex.: metodologia)
+========================= */
+.pagina {
+    background-color: white;
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    line-height: 1.6;
+}
+
+.pagina h1 {
+    margin-bottom: 15px;
+}
+
+.pagina h2 {
+    margin: 25px 0 10px;
+}
+
+/* =========================
+   RODAPÉ
+========================= */
+footer {
+    background-color: #1e3a8a;
+    color: white;
+    text-align: center;
+    font-size: 14px;
+    padding: 20px;
+}
+
+footer p {
+    opacity: 0.9;
+}
+
+.rodape-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 10px;
+}
+
+.rodape-links a {
+    color: white;
+    text-decoration: underline;
+}
+
+.rodape-links a:hover {
+    opacity: 0.8;
 }
 
 /* =========================
@@ -116,5 +260,179 @@ main {
 
     .controles {
         flex-direction: column;
+        align-items: stretch;
+        width: 90%;
     }
+
+    .filtro-grupo {
+        justify-content: space-between;
+    }
+
+    .controles select {
+        flex: 1;
+        max-width: 65%;
+    }
+
+    .pagina {
+        padding: 18px;
+    }
+
+}
+
+/* =====================================================================
+   BUSCA POR ENDEREÇO
+   A caixa é criada pelo script.js como um controle do Leaflet,
+   no canto superior esquerdo do mapa.
+===================================================================== */
+
+/* A caixa em si. A largura se adapta: até 300px, e menor em telas estreitas
+   (o desconto de 110px deixa espaço para as margens do mapa). */
+.busca-endereco {
+    background-color: white;
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+    width: min(300px, calc(100vw - 110px));
+}
+
+/* Campo de texto + botões na mesma linha */
+.busca-endereco form {
+    display: flex;
+    gap: 4px;
+}
+
+.busca-endereco input[type="search"] {
+    flex: 1;
+    min-width: 0;            /* permite o campo encolher em telas estreitas */
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+/* Botões "Buscar" e "×" */
+.busca-botao,
+.busca-limpar {
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.busca-botao {
+    background-color: #1e3a8a;   /* mesmo azul do cabeçalho */
+    color: white;
+    border: none;
+    padding: 6px 10px;
+}
+
+.busca-botao:hover {
+    background-color: #17306f;
+}
+
+.busca-limpar {
+    background-color: white;
+    color: #555;
+    border: 1px solid #ccc;
+    padding: 0 9px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.busca-limpar:hover {
+    background-color: #f0f0f0;
+}
+
+/* Foco visível para quem navega pelo teclado (mesma cor do resto do site) */
+.busca-endereco :focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 1px;
+}
+
+/* Mensagem abaixo da caixa ("Buscando...", endereço encontrado, avisos).
+   Quando está vazia, some. */
+.busca-status {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #444;
+}
+
+.busca-status:empty {
+    display: none;
+}
+
+/* Lista de resultados, quando o endereço é ambíguo */
+.busca-resultados {
+    list-style: none;
+    margin-top: 6px;
+    max-height: 200px;
+    overflow-y: auto;        /* rola se houver muitos resultados */
+}
+
+.busca-resultados:empty {
+    display: none;
+}
+
+.busca-resultados button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-top: 1px solid #eee;
+    padding: 8px 4px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1e3a8a;
+    cursor: pointer;
+}
+
+.busca-resultados button:hover {
+    background-color: #eef2fb;
+}
+
+/* Texto que só leitores de tela "enxergam" (o rótulo do campo de busca) */
+.so-leitor-de-tela {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* =====================================================================
+   PÁGINA DE METODOLOGIA
+===================================================================== */
+
+/* Espaço entre parágrafos */
+.pagina p {
+    margin-bottom: 12px;
+}
+
+/* Listas: recuo à esquerda (para os marcadores aparecerem) e espaço entre itens */
+.pagina ul {
+    margin: 0 0 12px 22px;
+}
+
+.pagina li {
+    margin-bottom: 6px;
+}
+
+/* Links na mesma cor azul do cabeçalho */
+.pagina a {
+    color: #1e3a8a;
+}
+
+/* Caixa de destaque do aviso no começo da página */
+.pagina .aviso {
+    background-color: #eef2fb;
+    border-left: 4px solid #1e3a8a;
+    border-radius: 4px;
+    padding: 12px 14px;
 }
