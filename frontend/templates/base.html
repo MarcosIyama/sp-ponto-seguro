@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>{% block title %}SP Ponto Seguro{% endblock %}</title>
-    <meta name="description" content="{% block description %}Mapa de crimes próximos a pontos de ônibus em São Paulo.{% endblock %}">
+    <meta name="description" content="{% block description %}Mapa de roubos de celulares registrados a até 50 metros de pontos de ônibus em São Paulo.{% endblock %}">
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -36,7 +36,7 @@
         <a href="{{ url_for('home') }}">
             <img src="{{ url_for('static', filename='logoMenor.png') }}" alt="SP Ponto Seguro" class="logo">
         </a>
-        <p>Crimes próximos a pontos de ônibus</p>
+        <p>Roubos de celulares próximos a pontos de ônibus na cidade de São Paulo</p>
 
         <!-- MENU: adicione um link aqui a cada página nova -->
         <nav class="menu" aria-label="Menu principal">

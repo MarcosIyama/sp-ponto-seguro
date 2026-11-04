@@ -405,3 +405,34 @@ footer p {
     white-space: nowrap;
     border: 0;
 }
+
+/* =====================================================================
+   PÁGINA DE METODOLOGIA
+===================================================================== */
+
+/* Espaço entre parágrafos */
+.pagina p {
+    margin-bottom: 12px;
+}
+
+/* Listas: recuo à esquerda (para os marcadores aparecerem) e espaço entre itens */
+.pagina ul {
+    margin: 0 0 12px 22px;
+}
+
+.pagina li {
+    margin-bottom: 6px;
+}
+
+/* Links na mesma cor azul do cabeçalho */
+.pagina a {
+    color: #1e3a8a;
+}
+
+/* Caixa de destaque do aviso no começo da página */
+.pagina .aviso {
+    background-color: #eef2fb;
+    border-left: 4px solid #1e3a8a;
+    border-radius: 4px;
+    padding: 12px 14px;
+}

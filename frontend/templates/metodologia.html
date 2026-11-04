@@ -1,29 +1,173 @@
 {% extends "base.html" %}
 
+{# O título e a descrição aparecem na aba do navegador e nos resultados de busca #}
 {% block title %}Metodologia | SP Ponto Seguro{% endblock %}
-{% block description %}Como os dados do SP Ponto Seguro são obtidos, tratados e apresentados no mapa.{% endblock %}
+{% block description %}Como os dados do SP Ponto Seguro são obtidos, tratados e apresentados no mapa, e quais são as limitações da análise.{% endblock %}
 
 {% block content %}
 <article class="pagina">
+
     <h1>Metodologia</h1>
     <p>
-        Esta página explica de onde vêm os dados do mapa, como foram tratados
-        e quais são as limitações da análise.
+        Esta página explica de onde vêm os dados do mapa, como foram tratados, como ler o
+        mapa de calor e quais são as limitações da análise.
     </p>
 
-    <h2>Fonte dos dados</h2>
-    <p>[Preencher: origem dos registros de crimes e dos pontos de ônibus, período coberto e data da última atualização.]</p>
+    <!-- AVISO: deixa claro, logo no começo, o que o mapa é e o que não é -->
+    <p class="aviso">
+        O SP Ponto Seguro é descritivo: mostra onde roubos de celulares foram registrados perto
+        de pontos de ônibus. Ele não faz previsões, não atribui risco a pessoas e não substitui
+        as informações oficiais de segurança pública.
+    </p>
 
+    <!-- ===================== O QUE O MAPA MOSTRA ===================== -->
+    <h2>O que o mapa mostra</h2>
+    <p>
+        O mapa reúne registros de roubos de celulares no município de São Paulo, de 2023 a
+        fevereiro de 2026, que ocorreram a até 50 metros de um ponto de ônibus. Ocorrências
+        mais distantes de qualquer ponto de ônibus não aparecem. Como a base trata de um único
+        tipo de crime, ela não representa o total de crimes da cidade.
+    </p>
+
+    <!-- ===================== FONTES ===================== -->
+    <h2>Fontes dos dados</h2>
+    <ul>
+        <li>
+            <strong>Roubos de celulares:</strong> dados abertos da Secretaria da Segurança Pública
+            do Estado de São Paulo (SSP-SP), disponíveis no
+            <a href="https://www.ssp.sp.gov.br/estatistica/dados-abertos" target="_blank" rel="noopener">portal de dados estatísticos</a>.
+            A base utilizada vai até fevereiro de 2026.
+        </li>
+        <li>
+            <strong>Pontos de ônibus:</strong> GeoSampa, portal geoespacial da Prefeitura de
+            São Paulo
+            (<a href="https://geosampa.prefeitura.sp.gov.br" target="_blank" rel="noopener">geosampa.prefeitura.sp.gov.br</a>).
+        </li>
+        <li>
+            <strong>Mapa de fundo e busca de endereços:</strong> OpenStreetMap.
+        </li>
+    </ul>
+
+    <!-- ===================== TRATAMENTO ===================== -->
     <h2>Tratamento dos dados</h2>
-    <p>[Preencher: limpeza dos registros, geocodificação dos endereços e remoção de ocorrências sem coordenadas.]</p>
+    <p>O tratamento foi feito em Python, com a biblioteca Pandas. As principais etapas foram:</p>
+    <ul>
+        <li>seleção das colunas relevantes;</li>
+        <li>filtragem por município (São Paulo) e por categoria criminal (roubos de celulares);</li>
+        <li>remoção de registros inválidos;</li>
+        <li>conversão das coordenadas geográficas;</li>
+        <li>padronização da estrutura dos arquivos e junção dos diferentes anos em uma única base.</li>
+    </ul>
+    <p>
+        A conversão das coordenadas dos pontos de ônibus também foi corrigida antes do uso.
+    </p>
+    <p>
+        Ao carregar os dados, o site faz ainda duas padronizações de exibição: junta grafias
+        diferentes do mesmo bairro (por exemplo, com e sem acento) e mostra os horários sem os
+        segundos.
+    </p>
 
+    <!-- ===================== RAIO DE 50 METROS ===================== -->
     <h2>Raio de 50 metros</h2>
     <p>
-        O mapa considera apenas ocorrências registradas a até 50 metros de um ponto de ônibus.
-        [Preencher: motivo da escolha desse raio e como a distância foi calculada.]
+        Na primeira versão do projeto, o cálculo da proximidade era feito no navegador, o que
+        deixava o site lento. Agora ele é feito antes, em Python: a distância geográfica entre
+        cada ocorrência e os pontos de ônibus é calculada com a biblioteca Geopy, e só ficam na
+        base as ocorrências que estão a até 50 metros de algum ponto.
+    </p>
+    <p>
+        O raio de 50 metros foi uma escolha do grupo, sem uma referência específica na
+        literatura. Outros raios levariam a resultados diferentes.
     </p>
 
+    <!-- ===================== FILTROS E BUSCA ===================== -->
+    <h2>Filtros e busca por endereço</h2>
+    <ul>
+        <li><strong>Ano:</strong> filtra as ocorrências pelo ano da base (veja as limitações abaixo).</li>
+        <li>
+            <strong>Horário:</strong> as ocorrências são agrupadas em quatro faixas:
+            manhã (06:00 às 11:59), tarde (12:00 às 17:59), noite (18:00 às 23:59) e
+            madrugada (00:00 às 05:59). Registros sem horário válido aparecem apenas quando o
+            filtro está em "Todos".
+        </li>
+        <li><strong>Bairro:</strong> mostra só as ocorrências do bairro escolhido e enquadra o mapa nele.</li>
+        <li>
+            <strong>Visualização:</strong> no modo "Automática", o mapa mostra o mapa de calor
+            quando está afastado e as ocorrências individuais quando está aproximado. Também é
+            possível escolher só o mapa de calor ou só os pontos.
+        </li>
+        <li>
+            <strong>Busca por endereço:</strong> usa o serviço Nominatim, do OpenStreetMap, com
+            a procura limitada à região de São Paulo. O texto digitado é enviado diretamente do
+            seu navegador a esse serviço e não passa pelo servidor do SP Ponto Seguro.
+        </li>
+    </ul>
+
+    <!-- ===================== MAPA DE CALOR ===================== -->
+    <h2>Como ler o mapa de calor</h2>
+    <p>
+        Cada ocorrência espalha sua influência ao redor de si, e onde várias influências se
+        somam a cor fica mais intensa. É a ideia da estimativa de densidade de kernel (KDE),
+        técnica usada na análise criminal para identificar áreas de concentração. No site, isso
+        é feito com o plugin Leaflet.heat, que faz uma aproximação visual dessa ideia: todas as
+        ocorrências têm o mesmo peso, a tela é dividida em pequenas células e as cores vão do
+        amarelo claro ao vinho. Quanto mais escura a cor, maior a quantidade de ocorrências
+        naquela região.
+    </p>
+    <p>
+        O resultado é um indicador <strong>relativo</strong> de concentração, não uma densidade
+        com unidade (como ocorrências por km²). O raio de influência de cada ocorrência é de 18
+        pixels, com 15 pixels de suavização nas bordas, valores escolhidos por testes visuais.
+    </p>
+    <p>
+        Como esses valores são medidos em pixels, a área real coberta muda com o zoom: com o
+        mapa afastado, o calor mostra concentrações em escala de bairro. A escala de cores
+        também é ajustada a cada nível de zoom, então <strong>as cores não devem ser comparadas
+        entre níveis de zoom diferentes</strong>. O entorno de 50 metros dos pontos de ônibus
+        é observado ao aproximar o mapa, nos pontos individuais, que mostram tipo, ano, hora,
+        bairro e logradouro de cada ocorrência.
+    </p>
+
+    <!-- ===================== LIMITAÇÕES ===================== -->
     <h2>Limitações</h2>
-    <p>[Preencher: crimes não registrados, endereços imprecisos e outras limitações que afetam a leitura do mapa.]</p>
+    <ul>
+        <li>
+            O mapa representa registros oficiais, e não o crime real: há subnotificação e
+            diferenças de registro entre territórios.
+        </li>
+        <li>
+            Locais com mais pessoas e mais pontos de ônibus tendem a mostrar mais ocorrências.
+            A concentração não é uma taxa por população nem por fluxo de passageiros.
+        </li>
+        <li>
+            Imprecisões de georreferenciamento na base podem afetar a posição das manchas.
+        </li>
+        <li>
+            Os dados de 2026 vão só até fevereiro. Comparar 2026 com anos completos pode levar a
+            conclusões erradas.
+        </li>
+        <li>
+            Os dados públicos nem sempre são padronizados: o ano usado no filtro pode não
+            coincidir com a data da ocorrência. A padronização desse campo está prevista para
+            uma atualização futura.
+        </li>
+        <li>
+            A base cobre apenas roubos de celulares, e o raio de 50 metros é uma escolha do
+            grupo.
+        </li>
+        <li>
+            Por tudo isso, o mapa de calor é descritivo e não preditivo.
+        </li>
+    </ul>
+
+    <!-- ===================== SOBRE O PROJETO ===================== -->
+    <h2>Sobre o projeto</h2>
+    <p>
+        O SP Ponto Seguro é um projeto integrador desenvolvido na UNIVESP. Ele usa Python
+        (Pandas e Geopy) no tratamento dos dados, Flask no servidor, Leaflet e OpenStreetMap
+        no mapa e a hospedagem Render. O código está disponível no
+        <a href="https://github.com/MarcosIyama/sp-ponto-seguro" target="_blank" rel="noopener">GitHub</a>.
+    </p>
+
 </article>
 {% endblock %}
