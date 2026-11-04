@@ -62,7 +62,8 @@ sp-ponto-seguro/
 │   ├── processed/          # CSV tratado (crimes_buffer_50m.csv)
 │   └── geo/                # GeoJSON dos pontos de ônibus
 ├── scripts/                # limpeza, conversão de GeoJSON e criação do banco
-├── requirements.txt
+├── requirements.txt        # dependências do site (o que o Render instala)
+├── requirements-dev.txt    # dependências dos scripts de tratamento de dados
 └── README.md
 ```
 
@@ -90,7 +91,7 @@ cd sp-ponto-seguro
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 
-# 3. Instalar as dependências
+# 3. Instalar as dependências do site
 pip install -r requirements.txt
 
 # 4. Iniciar o servidor
@@ -100,6 +101,24 @@ python backend/app.py
 Depois, abra **http://localhost:5000** no navegador. As páginas dependem do Flask: não abra os arquivos de `frontend/templates` direto no navegador nem por extensões como o Live Server.
 
 > Em Linux ou macOS, ative o ambiente com `source venv/bin/activate`.
+
+Para rodar os scripts da pasta `scripts/` (tratamento de dados e análise espacial), instale também as dependências de desenvolvimento, que incluem GeoPandas, Geopy e Shapely:
+
+```powershell
+pip install -r requirements-dev.txt
+```
+
+## Publicação (Render)
+
+O site é publicado no [Render](https://render.com), integrado ao GitHub: cada atualização da branch `main` gera uma nova publicação. Configuração do serviço web:
+
+| Campo | Valor |
+|---|---|
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `gunicorn backend.app:app --workers 1 --threads 4 --timeout 120` |
+| Health Check Path | `/status` |
+
+O servidor lê e prepara todos os dados ao iniciar (cerca de 3 segundos) e os mantém na memória, por isso usa um único processo com várias threads: cada processo adicional carregaria uma cópia dos dados. No plano gratuito, o serviço "dorme" após alguns minutos sem acessos, e o primeiro acesso depois disso demora mais.
 
 ## Limitações
 

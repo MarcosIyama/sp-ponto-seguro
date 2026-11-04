@@ -1,0 +1,39 @@
+# =====================================================================
+# DEPENDÊNCIAS DE DESENVOLVIMENTO E TRATAMENTO DE DADOS
+# Use no seu computador (pip install -r requirements-dev.txt) para rodar
+# os scripts da pasta scripts/ (limpeza, conversão de GeoJSON, cálculo do
+# raio de 50 m etc.). O servidor do Render NÃO precisa destes pacotes.
+# =====================================================================
+
+# Inclui tudo o que o site precisa (requirements.txt)
+-r requirements.txt
+
+# --- Análise espacial ---
+geopandas==1.1.3
+geopy==2.4.1
+geographiclib==2.1
+shapely==2.1.2
+pyproj==3.7.2
+pyogrio==0.12.1
+rtree==1.4.1
+certifi==2026.4.22
+
+# --- Gráficos e planilhas ---
+matplotlib==3.10.9
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.62.1
+kiwisolver==1.5.0
+pillow==12.2.0
+pyparsing==3.3.2
+openpyxl==3.1.5
+et_xmlfile==2.0.0
+
+# --- Só no Windows (dependência do click para cores no terminal) ---
+colorama==0.4.6
+
+# Removidos em relação ao requirements.txt antigo:
+#   git-filter-repo : ferramenta de linha de comando para reescrever o histórico
+#                     do Git; não é uma dependência do código.
+#   jsonify==0.5    : pacote antigo sem relação com o Flask; o "jsonify" que o
+#                     app.py usa vem do próprio Flask (from flask import jsonify).
