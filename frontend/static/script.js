@@ -43,6 +43,11 @@ const ZOOM_MINIMO_PONTOS = ZOOM_TROCA_CALOR_PONTOS;
 // Desenhar em lotes evita que a página trave quando há muitos pontos.
 const TAMANHO_LOTE = 2000;
 
+// Tempo máximo de espera pela resposta do servidor ao buscar ocorrências, em
+// milissegundos. Passando disso, a busca é cancelada e o usuário recebe um aviso
+// (em vez de ficar esperando para sempre com o mapa em branco).
+const TEMPO_LIMITE_BUSCA_MS = 60000;
+
 // No modo de pontos, desenhamos também uma margem em volta da tela,
 // para não precisar redesenhar a cada pequeno arrasto do mapa.
 // 0.5 = margem de 50% do tamanho da tela em cada lado.
@@ -203,6 +208,7 @@ let limitesDesenhados = null;    // área do mapa que já está desenhada
 let versaoBusca = 0;             // ignora respostas antigas do servidor quando o filtro muda
 let versaoDesenho = 0;           // cancela desenhos antigos quando algo muda
 let carregando = false;          // true enquanto espera a resposta do servidor
+let abortarOcorrencias = null;   // permite cancelar a busca de ocorrências anterior
 
 // Texto de status mostrado acima do mapa.
 let estadoCrimes = "";
@@ -457,12 +463,19 @@ function prepararPontosCalor() {
 function mostrarCalor() {
   const zoom = map.getZoom();
 
-  if (!camadaCalor) {
-    // Primeira vez: cria a camada já com as opções.
+  if (!camadaCalor || !map.hasLayer(camadaCalor)) {
+    // O calor não está na tela (primeira vez, ou voltando do modo de pontos).
+    // ATENÇÃO: não dá para atualizar a camada do plugin enquanto ela está fora
+    // do mapa: setLatLngs() e setOptions() dão erro nesse caso (o plugin tenta ler
+    // o mapa, que não existe mais). Por isso criamos uma camada nova, já com os
+    // dados e as opções atuais, e só então a colocamos no mapa.
     camadaCalor = L.heatLayer(pontosCalor, opcoesDoCalor());
+    camadaCalor.addTo(map);
     calorDesatualizado = false;
     zoomDoCalor = zoom;
   } else {
+    // O calor já está na tela: aqui é seguro atualizá-lo.
+
     // Se os dados mudaram desde a última vez, atualiza a camada.
     if (calorDesatualizado) {
       camadaCalor.setLatLngs(pontosCalor);
@@ -477,8 +490,6 @@ function mostrarCalor() {
     }
   }
 
-  if (!map.hasLayer(camadaCalor)) camadaCalor.addTo(map);
-
   if (!legendaVisivel) {
     legendaCalor.addTo(map);
     legendaVisivel = true;
@@ -491,6 +502,10 @@ function mostrarCalor() {
 
 function esconderCalor() {
   if (camadaCalor && map.hasLayer(camadaCalor)) map.removeLayer(camadaCalor);
+
+  // Descartamos a camada: depois de removida ela não pode mais ser atualizada
+  // (veja o comentário em mostrarCalor). Uma nova é criada quando o calor voltar.
+  camadaCalor = null;
 
   if (legendaVisivel) {
     legendaCalor.remove();
@@ -516,6 +531,30 @@ window.ajustarCalor = function (novos) {
 
   atualizarVisualizacao();
   return CALOR;                 // mostra os valores atuais no Console
+};
+
+// Ferramenta de diagnóstico: se o mapa parar de desenhar, abra o Console do
+// navegador (F12), digite  diagnosticoMapa()  e envie a tabela que aparecer.
+// Ela mostra o estado interno do mapa naquele momento, sem alterar nada.
+window.diagnosticoMapa = function () {
+  const estado = {
+    zoom: map.getZoom(),
+    visualizacaoEscolhida: filtroVisualizacao ? filtroVisualizacao.value : "auto",
+    visualizacaoEmUso: modoEfetivo(),
+    carregando: carregando,
+    ocorrenciasRecebidas: listaAtual.length,
+    ocorrenciasAposFiltroDeBairro: listaFiltrada.length,
+    pontosVermelhosNoMapa: camadaCrimes.getLayers().length,
+    calorNoMapa: !!camadaCalor && map.hasLayer(camadaCalor),
+    pontosDeOnibusCarregados: !!camadaPontos,
+    pontosDeOnibusNoMapa: !!camadaPontos && map.hasLayer(camadaPontos),
+    areaJaDesenhada: limitesDesenhados ? limitesDesenhados.toBBoxString() : null,
+    versaoBusca: versaoBusca,
+    versaoDesenho: versaoDesenho,
+    textoDeStatus: estadoCrimes
+  };
+  console.table(estado);
+  return estado;
 };
 
 // =====================================================================
@@ -618,7 +657,12 @@ function desenharCrimes(lista, versao, total) {
 function atualizarVisualizacao() {
   // Os pontos de ônibus dependem da visualização escolhida, então são
   // reavaliados junto (eles não dependem dos dados de ocorrências).
-  atualizarPontos();
+  // O try/catch isola esta etapa: se ela falhar, o resto continua funcionando.
+  try {
+    atualizarPontos();
+  } catch (erro) {
+    console.error("Erro ao atualizar os pontos de ônibus:", erro);
+  }
 
   // Enquanto espera o servidor, não desenha nada (os dados ainda são antigos).
   if (carregando) {
@@ -626,12 +670,19 @@ function atualizarVisualizacao() {
     return;
   }
 
-  if (modoEfetivo() === "calor") {
-    esconderPontosOcorrencias();
-    mostrarCalor();
-  } else {
-    esconderCalor();
-    mostrarPontosOcorrencias();
+  try {
+    if (modoEfetivo() === "calor") {
+      esconderPontosOcorrencias();
+      mostrarCalor();
+    } else {
+      esconderCalor();
+      mostrarPontosOcorrencias();
+    }
+  } catch (erro) {
+    // Em vez de o mapa simplesmente "parar", registramos o erro no Console (F12)
+    // e avisamos o usuário.
+    console.error("Erro ao desenhar a visualização:", erro);
+    estadoCrimes = "Não foi possível desenhar as ocorrências. Mude um filtro para tentar de novo.";
   }
 
   renderizarStatus();
@@ -651,7 +702,10 @@ function carregarOcorrencias() {
   pontosCalor = [];
   calorDesatualizado = true;
   esconderPontosOcorrencias();
-  if (camadaCalor) camadaCalor.setLatLngs([]);
+
+  // Só esvazia o calor se ele está na tela. Fora do mapa não há o que apagar
+  // (calorDesatualizado já garante que ele será atualizado quando voltar).
+  if (camadaCalor && map.hasLayer(camadaCalor)) camadaCalor.setLatLngs([]);
 
   estadoCrimes = "Carregando ocorrências...";
   renderizarStatus();
@@ -662,9 +716,17 @@ function carregarOcorrencias() {
     faixa: filtroFaixa.value
   });
 
+  // Se ainda havia uma busca anterior em andamento, cancela: só a mais recente importa.
+  if (abortarOcorrencias) abortarOcorrencias.abort();
+  const controlador = new AbortController();
+  abortarOcorrencias = controlador;
+
+  // Cancela também se o servidor demorar demais.
+  const temporizador = setTimeout(() => controlador.abort(), TEMPO_LIMITE_BUSCA_MS);
+
   // O servidor já devolve só o ano e o horário pedidos
   // (e o navegador reaproveita respostas repetidas).
-  fetch(`/api/crimes?${params}`)
+  fetch(`/api/crimes?${params}`, { signal: controlador.signal })
     .then((res) => {
       if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
@@ -677,13 +739,17 @@ function carregarOcorrencias() {
       aplicarFiltroBairro(false);
     })
     .catch((err) => {
-      console.error("Erro ao carregar crimes:", err);
-      if (busca !== versaoBusca) return;
+      if (busca !== versaoBusca) return; // busca antiga (cancelada ou substituída): ignora
 
+      console.error("Erro ao carregar ou desenhar as ocorrências:", err);
       carregando = false;
-      estadoCrimes = "Não foi possível carregar as ocorrências. Atualize a página para tentar de novo.";
+
+      estadoCrimes = err.name === "AbortError"
+        ? "O servidor demorou para responder. Mude um filtro ou atualize a página para tentar de novo."
+        : "Não foi possível carregar as ocorrências. Mude um filtro ou atualize a página para tentar de novo.";
       renderizarStatus();
-    });
+    })
+    .finally(() => clearTimeout(temporizador));
 }
 
 
